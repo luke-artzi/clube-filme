@@ -1,0 +1,19 @@
+{
+  "name": "clube-filme",
+  "version": "1.0.0",
+  "description": "Site do Clube do Filme: marque os filmes do Top 250 do IMDb que você assistiu e dê notas de 1 a 10.",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test",
+    "update-movies": "node scripts/update-movies.js"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}

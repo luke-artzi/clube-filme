@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clube do Filme</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">🎬 Clube do Filme</div>
+    <nav id="nav" class="nav" hidden>
+      <button data-view="movies" class="active">Filmes</button>
+      <button data-view="ranking">Ranking do clube</button>
+      <button data-view="members">Membros</button>
+    </nav>
+    <div id="userbox" class="userbox" hidden>
+      <span id="user-name"></span>
+      <button id="logout" class="link">Sair</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Login / cadastro -->
+    <section id="auth" class="auth" hidden>
+      <div class="card auth-card">
+        <h1>Clube do Filme</h1>
+        <p class="muted">Os 250 melhores filmes do IMDb. Marque o que você já viu e dê sua nota de 1 a 10.</p>
+        <div class="tabs">
+          <button id="tab-login" class="active">Entrar</button>
+          <button id="tab-register">Criar conta</button>
+        </div>
+        <form id="auth-form">
+          <label id="f-display" hidden>Nome (como aparece para o clube)
+            <input name="displayName" maxlength="40" autocomplete="nickname">
+          </label>
+          <label>Usuário
+            <input name="username" required autocomplete="username" pattern="[a-zA-Z0-9_.\-]{3,30}">
+          </label>
+          <label>Senha
+            <input name="password" type="password" required minlength="6" autocomplete="current-password">
+          </label>
+          <label id="f-invite" hidden>Código de convite do clube
+            <input name="inviteCode" autocomplete="off">
+          </label>
+          <p id="auth-error" class="error" role="alert"></p>
+          <button type="submit" class="primary" id="auth-submit">Entrar</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Filmes -->
+    <section id="view-movies" hidden>
+      <div class="summary" id="summary"></div>
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="Buscar por título ou ano…">
+        <select id="filter">
+          <option value="all">Todos</option>
+          <option value="watched">Já assisti</option>
+          <option value="unwatched">Não assisti</option>
+        </select>
+        <select id="sort">
+          <option value="rank">Posição no IMDb</option>
+          <option value="mine">Minha nota</option>
+          <option value="club">Média do clube</option>
+          <option value="year">Ano</option>
+          <option value="title">Título</option>
+        </select>
+      </div>
+      <ul id="movie-list" class="movie-list"></ul>
+    </section>
+
+    <!-- Ranking -->
+    <section id="view-ranking" hidden>
+      <h2>Ranking do clube</h2>
+      <p class="muted">Filmes ordenados pela média das notas dos membros.</p>
+      <ol id="ranking-list" class="ranking"></ol>
+    </section>
+
+    <!-- Membros -->
+    <section id="view-members" hidden>
+      <h2>Membros</h2>
+      <ul id="member-list" class="members"></ul>
+      <div id="member-detail"></div>
+    </section>
+  </main>
+
+  <dialog id="movie-dialog">
+    <form method="dialog"><button class="close" aria-label="Fechar">×</button></form>
+    <div id="dialog-body"></div>
+  </dialog>
+
+  <script src="/app.js"></script>
+</body>
+</html>

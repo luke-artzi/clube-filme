@@ -12,6 +12,7 @@ Cada membro cria sua conta, marca os filmes que já assistiu e dá uma nota de *
 - Busca por título ou ano, filtros (assistidos e não assistidos) e ordenação (posição no IMDb, minha nota, média do clube, ano, título).
 - **Média do clube** em cada filme. Ao clicar no título, aparecem as notas de cada membro.
 - **Ranking do clube**: os filmes ordenados pela média das notas dos membros.
+- **Abrir no Stremio**: cada filme tem um link que abre a página dele no app do Stremio, ou no Stremio Web. O que aparece para assistir depende dos addons que cada pessoa instalou no próprio Stremio.
 - **Membros**: quanto cada pessoa já assistiu, a média dela e a lista das notas que deu.
 
 ## Como rodar

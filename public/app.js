@@ -18,6 +18,9 @@ async function api(path, options = {}) {
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const imdbUrl = (id) => `https://www.imdb.com/pt/title/${id}/`;
+// O Stremio identifica filmes pelo mesmo ID do IMDb.
+const stremioAppUrl = (id) => `stremio:///detail/movie/${id}`;
+const stremioWebUrl = (id) => `https://web.stremio.com/#/detail/movie/${id}`;
 const fmt = (n) => (n == null ? '–' : Number(n).toFixed(1).replace('.', ','));
 
 // ---------- Autenticação ----------
@@ -136,7 +139,8 @@ function movieItem(m) {
       <div class="info">
         <button class="title link" data-open="${m.id}">${esc(m.title)}</button>
         <div class="meta">${m.originalTitle !== m.title ? `${esc(m.originalTitle)} · ` : ''}${m.year}
-          · <a href="${imdbUrl(m.id)}" target="_blank" rel="noopener">IMDb ↗</a></div>
+          · <a href="${imdbUrl(m.id)}" target="_blank" rel="noopener">IMDb ↗</a>
+          · <a href="${stremioAppUrl(m.id)}" class="stremio" title="Abre o filme no app do Stremio">▶ Stremio</a></div>
         <div class="club">Clube: <strong>${fmt(m.clubAvg)}</strong> <span class="muted">(${m.clubCount} ${m.clubCount === 1 ? 'nota' : 'notas'})</span></div>
       </div>
       <div class="rate">
@@ -188,6 +192,10 @@ async function openMovie(id) {
   $('#dialog-body').innerHTML = `
     <h2>${esc(m.title)} <span class="muted">(${m.year})</span></h2>
     <p class="muted">${esc(m.originalTitle)} · #${m.rank} no IMDb · <a href="${imdbUrl(m.id)}" target="_blank" rel="noopener">ver no IMDb ↗</a></p>
+    <p class="watch">
+      <a class="btn-stremio" href="${stremioAppUrl(m.id)}">▶ Abrir no app Stremio</a>
+      <a class="btn-stremio outline" href="${stremioWebUrl(m.id)}" target="_blank" rel="noopener">Stremio Web ↗</a>
+    </p>
     <p>Média do clube: <strong>${fmt(m.clubAvg)}</strong> (${m.clubCount} ${m.clubCount === 1 ? 'nota' : 'notas'})</p>
     ${ratings.length ? `<ul class="who">${ratings.map((r) => `<li><span>${esc(r.displayName)}</span><strong>${r.rating}</strong></li>`).join('')}</ul>`
       : '<p class="muted">Ninguém do clube avaliou ainda.</p>'}`;

@@ -139,3 +139,12 @@ dialog h2 { margin: 0 0 4px; padding-right: 24px; }
   .members li { grid-template-columns: 1fr auto; }
   .members .progress { grid-column: 1 / -1; }
 }
+
+/* Stremio */
+.meta .stremio { color: #a78bfa; }
+.watch { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-stremio {
+  padding: 8px 12px; border-radius: 8px; text-decoration: none; font-weight: 600;
+  background: #7b5bf5; color: #fff; border: 1px solid #7b5bf5;
+}
+.btn-stremio.outline { background: none; color: #a78bfa; }

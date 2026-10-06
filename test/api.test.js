@@ -70,3 +70,43 @@ test('fluxo completo: cadastro, nota, média do clube', async () => {
   assert.equal((await ana('POST', '/api/login', { username: 'ana', password: 'errada' })).status, 401);
   assert.equal((await ana('POST', '/api/login', { username: 'Ana', password: '123456' })).status, 200);
 });
+
+test('addon do Stremio: manifest e catálogos pessoais', async () => {
+  const caio = client();
+  await caio('POST', '/api/register', { username: 'caio', password: '123456', inviteCode: 'pipoca' });
+  await caio('PUT', '/api/movies/tt0068646/rating', { rating: 9 });
+
+  assert.equal((await client()('GET', '/api/stremio')).status, 401);
+  const links = (await caio('GET', '/api/stremio')).body;
+  assert.match(links.manifestUrl, /^http:\/\/127\.0\.0\.1:\d+\/addon\/[\w-]+\/manifest\.json$/);
+  assert.ok(links.appUrl.startsWith('stremio://'));
+  const addon = links.manifestUrl.replace(base, '').replace('/manifest.json', '');
+
+  const get = async (p) => {
+    const res = await fetch(base + addon + p);
+    assert.equal(res.headers.get('access-control-allow-origin'), '*');
+    return { status: res.status, body: await res.json() };
+  };
+
+  const man = (await get('/manifest.json')).body;
+  assert.deepEqual(man.resources, ['catalog']);
+  assert.equal(man.catalogs.length, 4);
+
+  const top = (await get('/catalog/movie/clube-top250.json')).body.metas;
+  assert.equal(top.length, 100);
+  assert.equal(top[0].id, 'tt0111161');
+  assert.equal((await get('/catalog/movie/clube-top250/skip=200.json')).body.metas.length, 50);
+  const busca = (await get('/catalog/movie/clube-top250/search=poderoso.json')).body.metas;
+  assert.ok(busca.every((m) => m.name.includes('Poderoso')) && busca.length >= 2);
+
+  const minhas = (await get('/catalog/movie/clube-minhas-notas.json')).body.metas;
+  assert.deepEqual(minhas.map((m) => m.id), ['tt0068646']);
+  assert.match(minhas[0].description, /Sua nota: 9/);
+  assert.equal((await get('/catalog/movie/clube-nao-vi.json')).body.metas[0].id, 'tt0111161');
+  assert.ok((await get('/catalog/movie/clube-ranking.json')).body.metas.some((m) => m.id === 'tt0068646'));
+  assert.equal((await get('/catalog/movie/outro.json')).status, 404);
+
+  // Gerar link novo invalida o antigo.
+  await caio('POST', '/api/stremio/reset');
+  assert.equal((await get('/manifest.json')).status, 404);
+});

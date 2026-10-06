@@ -23,6 +23,8 @@ const stremioAppUrl = (id) => `stremio:///detail/movie/${id}`;
 const stremioWebUrl = (id) => `https://web.stremio.com/#/detail/movie/${id}`;
 const fmt = (n) => (n == null ? '–' : Number(n).toFixed(1).replace('.', ','));
 
+const VIEWS = ['movies', 'ranking', 'members', 'stremio'];
+
 // ---------- Autenticação ----------
 
 function setMode(mode) {
@@ -42,7 +44,7 @@ function showAuth() {
   $('#auth').hidden = false;
   $('#nav').hidden = true;
   $('#userbox').hidden = true;
-  for (const v of ['movies', 'ranking', 'members']) $(`#view-${v}`).hidden = true;
+  for (const v of VIEWS) $(`#view-${v}`).hidden = true;
 }
 
 async function onLoggedIn(user) {
@@ -80,9 +82,10 @@ $('#logout').onclick = async () => {
 
 function showView(view) {
   for (const btn of document.querySelectorAll('#nav button')) btn.classList.toggle('active', btn.dataset.view === view);
-  for (const v of ['movies', 'ranking', 'members']) $(`#view-${v}`).hidden = v !== view;
+  for (const v of VIEWS) $(`#view-${v}`).hidden = v !== view;
   if (view === 'ranking') renderRanking();
   if (view === 'members') loadMembers();
+  if (view === 'stremio') loadStremio();
 }
 for (const btn of document.querySelectorAll('#nav button')) btn.onclick = () => showView(btn.dataset.view);
 
@@ -245,6 +248,35 @@ $('#member-list').addEventListener('click', async (e) => {
       : '<p class="muted">Ainda não avaliou nenhum filme.</p>'}`;
   $('#member-detail').scrollIntoView({ behavior: 'smooth' });
 });
+
+// ---------- Stremio ----------
+
+function renderStremio(links) {
+  $('#stremio-app').href = links.appUrl;
+  $('#stremio-web').href = links.webUrl;
+  $('#stremio-url').value = links.manifestUrl;
+}
+
+async function loadStremio() {
+  renderStremio(await api('/api/stremio'));
+}
+
+$('#stremio-copy').onclick = async () => {
+  const input = $('#stremio-url');
+  try {
+    await navigator.clipboard.writeText(input.value);
+  } catch {
+    input.select();
+    document.execCommand('copy');
+  }
+  $('#stremio-copy').textContent = 'Copiado!';
+  setTimeout(() => { $('#stremio-copy').textContent = 'Copiar link'; }, 1500);
+};
+
+$('#stremio-reset').onclick = async () => {
+  if (!confirm('Gerar um link novo? Você vai precisar reinstalar o addon no Stremio.')) return;
+  renderStremio(await api('/api/stremio/reset', { method: 'POST' }));
+};
 
 // ---------- Início ----------
 

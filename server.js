@@ -51,6 +51,12 @@ db.exec(`
   );
 `);
 
+// Migração: token pessoal do addon do Stremio.
+if (!db.prepare("SELECT 1 FROM pragma_table_info('users') WHERE name = 'addon_token'").get()) {
+  db.exec('ALTER TABLE users ADD COLUMN addon_token TEXT');
+}
+db.exec('CREATE UNIQUE INDEX IF NOT EXISTS users_addon_token ON users(addon_token)');
+
 // Sincroniza a tabela de filmes com data/movies.json a cada início.
 // Filmes que saíram do Top 250 ficam com rank NULL (as notas antigas não se perdem).
 function syncMovies() {
@@ -141,6 +147,22 @@ function rateLimit(req, res, next) {
   next();
 }
 
+// Filmes do Top 250 com a nota do usuário e a média do clube, em ordem de posição.
+function moviesForUser(userId) {
+  return db.prepare(`
+    SELECT m.id, m.rank, m.title, m.original_title AS originalTitle, m.year,
+           my.rating AS myRating,
+           ROUND(AVG(r.rating), 1) AS clubAvg,
+           COUNT(r.rating) AS clubCount
+    FROM movies m
+    LEFT JOIN ratings my ON my.movie_id = m.id AND my.user_id = ?
+    LEFT JOIN ratings r ON r.movie_id = m.id
+    WHERE m.rank IS NOT NULL
+    GROUP BY m.id
+    ORDER BY m.rank
+  `).all(userId);
+}
+
 // ---------- App ----------
 
 const app = express();
@@ -198,19 +220,7 @@ app.get('/api/me', (req, res) => {
 
 // Lista de filmes com a nota do usuário e a média do clube.
 app.get('/api/movies', requireAuth, (req, res) => {
-  const movies = db.prepare(`
-    SELECT m.id, m.rank, m.title, m.original_title AS originalTitle, m.year,
-           my.rating AS myRating,
-           ROUND(AVG(r.rating), 1) AS clubAvg,
-           COUNT(r.rating) AS clubCount
-    FROM movies m
-    LEFT JOIN ratings my ON my.movie_id = m.id AND my.user_id = ?
-    LEFT JOIN ratings r ON r.movie_id = m.id
-    WHERE m.rank IS NOT NULL
-    GROUP BY m.id
-    ORDER BY m.rank
-  `).all(req.user.id);
-  res.json({ movies });
+  res.json({ movies: moviesForUser(req.user.id) });
 });
 
 // Notas de todos os membros para um filme.
@@ -273,6 +283,128 @@ app.get('/api/members/:username', requireAuth, (req, res) => {
     ORDER BY r.rating DESC, m.rank
   `).all(user.id);
   res.json({ user, ratings });
+});
+
+// ---------- Addon do Stremio ----------
+// Cada membro tem um link pessoal (/addon/<token>/manifest.json) para ver as próprias listas.
+
+function publicBaseUrl(req) {
+  return (process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+}
+
+function ensureAddonToken(userId) {
+  const row = db.prepare('SELECT addon_token FROM users WHERE id = ?').get(userId);
+  if (row.addon_token) return row.addon_token;
+  const token = crypto.randomBytes(24).toString('base64url');
+  db.prepare('UPDATE users SET addon_token = ? WHERE id = ?').run(token, userId);
+  return token;
+}
+
+function addonLinks(req, token) {
+  const manifestUrl = `${publicBaseUrl(req)}/addon/${token}/manifest.json`;
+  return {
+    manifestUrl,
+    appUrl: manifestUrl.replace(/^https?:\/\//, 'stremio://'),
+    webUrl: `https://web.stremio.com/#/addons?addon=${encodeURIComponent(manifestUrl)}`,
+  };
+}
+
+app.get('/api/stremio', requireAuth, (req, res) => {
+  res.json(addonLinks(req, ensureAddonToken(req.user.id)));
+});
+
+// Gera um link novo; o antigo para de funcionar.
+app.post('/api/stremio/reset', requireAuth, (req, res) => {
+  db.prepare('UPDATE users SET addon_token = NULL WHERE id = ?').run(req.user.id);
+  res.json(addonLinks(req, ensureAddonToken(req.user.id)));
+});
+
+const PAGE_SIZE = 100;
+const CATALOGS = [
+  { id: 'clube-top250', name: 'Clube do Filme · Top 250', extra: [{ name: 'search' }, { name: 'skip' }] },
+  { id: 'clube-ranking', name: 'Clube do Filme · Ranking do clube', extra: [{ name: 'skip' }] },
+  { id: 'clube-nao-vi', name: 'Clube do Filme · Ainda não vi', extra: [{ name: 'skip' }] },
+  { id: 'clube-minhas-notas', name: 'Clube do Filme · Minhas notas', extra: [{ name: 'skip' }] },
+];
+
+function manifest(user) {
+  return {
+    id: 'com.clubedofilme.catalogo',
+    version: '1.0.0',
+    name: 'Clube do Filme',
+    description: `Listas do Clube do Filme para ${user.displayName}: Top 250 do IMDb, ranking do clube, o que falta ver e suas notas.`,
+    resources: ['catalog'],
+    types: ['movie'],
+    idPrefixes: ['tt'],
+    catalogs: CATALOGS.map((c) => ({ type: 'movie', ...c })),
+  };
+}
+
+const fmtNote = (n) => Number(n).toFixed(1).replace('.', ',');
+
+function toMeta(m) {
+  const parts = [`#${m.rank} no Top 250 do IMDb`];
+  if (m.clubCount) parts.push(`Média do clube: ${fmtNote(m.clubAvg)} (${m.clubCount} ${m.clubCount === 1 ? 'nota' : 'notas'})`);
+  if (m.myRating != null) parts.push(`Sua nota: ${m.myRating}`);
+  return {
+    id: m.id,
+    type: 'movie',
+    name: m.title,
+    poster: `https://images.metahub.space/poster/medium/${m.id}/img`,
+    releaseInfo: String(m.year),
+    description: parts.join(' · '),
+  };
+}
+
+// O Stremio manda os parâmetros extras como um segmento "search=x&skip=100".
+function parseExtra(segment) {
+  return segment ? Object.fromEntries(new URLSearchParams(segment)) : {};
+}
+
+function catalogMovies(userId, catalogId, extra) {
+  let list = moviesForUser(userId);
+  if (catalogId === 'clube-ranking') {
+    list = list.filter((m) => m.clubCount > 0)
+      .sort((a, b) => b.clubAvg - a.clubAvg || b.clubCount - a.clubCount || a.rank - b.rank);
+  } else if (catalogId === 'clube-nao-vi') {
+    list = list.filter((m) => m.myRating == null);
+  } else if (catalogId === 'clube-minhas-notas') {
+    list = list.filter((m) => m.myRating != null).sort((a, b) => b.myRating - a.myRating || a.rank - b.rank);
+  } else if (catalogId !== 'clube-top250') {
+    return null;
+  }
+  if (extra.search) {
+    const q = extra.search.toLowerCase();
+    list = list.filter((m) => `${m.title} ${m.originalTitle} ${m.year}`.toLowerCase().includes(q));
+  }
+  const skip = Math.max(0, Number(extra.skip) || 0);
+  return list.slice(skip, skip + PAGE_SIZE);
+}
+
+app.use('/addon', (req, res, next) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Headers', '*');
+  next();
+});
+
+app.get('/addon/:token/*path', (req, res) => {
+  const user = db.prepare('SELECT id, display_name AS displayName FROM users WHERE addon_token = ?').get(req.params.token);
+  if (!user) return res.status(404).json({ error: 'Link do addon inválido. Gere um novo no site do clube.' });
+
+  const segments = req.params.path;
+  const last = segments.length ? segments[segments.length - 1].replace(/\.json$/, '') : '';
+  res.set('Cache-Control', 'no-cache');
+
+  if (segments.length === 1 && last === 'manifest') return res.json(manifest(user));
+
+  // catalog/movie/<id>.json  ou  catalog/movie/<id>/<extra>.json
+  if (segments[0] === 'catalog' && segments[1] === 'movie' && (segments.length === 3 || segments.length === 4)) {
+    const catalogId = segments.length === 3 ? last : segments[2];
+    const extra = segments.length === 4 ? parseExtra(last) : {};
+    const movies = catalogMovies(user.id, catalogId, extra);
+    if (movies) return res.json({ metas: movies.map(toMeta) });
+  }
+  res.status(404).json({ error: 'Recurso não encontrado.' });
 });
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Rota não encontrada.' }));

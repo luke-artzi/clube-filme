@@ -148,3 +148,8 @@ dialog h2 { margin: 0 0 4px; padding-right: 24px; }
   background: #7b5bf5; color: #fff; border: 1px solid #7b5bf5;
 }
 .btn-stremio.outline { background: none; color: #a78bfa; }
+.catalogs { padding-left: 20px; }
+.catalogs li { margin-bottom: 4px; }
+.stremio-card { margin-top: 16px; }
+.stremio-card label { display: block; margin: 16px 0 8px; }
+.stremio-actions { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }

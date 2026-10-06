@@ -13,6 +13,7 @@ Cada membro cria sua conta, marca os filmes que já assistiu e dá uma nota de *
 - **Média do clube** em cada filme. Ao clicar no título, aparecem as notas de cada membro.
 - **Ranking do clube**: os filmes ordenados pela média das notas dos membros.
 - **Abrir no Stremio**: cada filme tem um link que abre a página dele no app do Stremio, ou no Stremio Web. O que aparece para assistir depende dos addons que cada pessoa instalou no próprio Stremio.
+- **Addon do Stremio**: na aba "Stremio" cada membro instala um addon pessoal. Ele mostra dentro do Stremio as listas *Top 250*, *Ranking do clube*, *Ainda não vi* e *Minhas notas*.
 - **Membros**: quanto cada pessoa já assistiu, a média dela e a lista das notas que deu.
 
 ## Como rodar
@@ -32,6 +33,7 @@ CLUB_INVITE_CODE=pipoca npm start
 | `PORT`             | `3000`          | Porta do servidor |
 | `DB_PATH`          | `data/clube.db` | Arquivo do banco SQLite |
 | `CLUB_INVITE_CODE` | *(vazio)*       | Se definido, esse código é exigido para criar conta |
+| `PUBLIC_URL`       | *(detectado)*   | Endereço público do site (ex.: `https://clube.exemplo.com`), usado no link do addon do Stremio |
 | `NODE_ENV`         | —               | Use `production` em HTTPS (o cookie passa a ser `Secure`) |
 
 ## Atualizar a lista do IMDb
@@ -48,6 +50,15 @@ Depois reinicie o servidor. Filmes que saíram do Top 250 somem da lista, mas as
 
 Funciona em qualquer serviço que rode Node e tenha **disco persistente** para o arquivo SQLite, como Render (com Disk), Railway (com Volume), Fly.io ou uma VPS.
 Configure `DB_PATH` apontando para o disco persistente, defina `CLUB_INVITE_CODE` e `NODE_ENV=production`, e use `npm start` como comando.
+
+## Addon do Stremio
+
+O servidor também funciona como um addon de catálogo do Stremio. Cada membro tem um link pessoal
+(`/addon/<token>/manifest.json`), que fica na aba **Stremio** do site. O link pode ser trocado a qualquer momento,
+e o antigo para de funcionar.
+
+- O addon só fornece **listas** (catálogos). Os detalhes do filme vêm do Cinemeta, e as fontes de vídeo vêm dos outros addons que cada pessoa instalou.
+- O app do Stremio só instala addons por **HTTPS**, com exceção de `localhost`. Em produção, rode o site com HTTPS e defina `PUBLIC_URL` se o endereço detectado não for o certo.
 
 ## Testes
 

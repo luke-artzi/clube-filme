@@ -14,6 +14,7 @@
       <button data-view="movies" class="active">Filmes</button>
       <button data-view="ranking">Ranking do clube</button>
       <button data-view="members">Membros</button>
+      <button data-view="stremio">Stremio</button>
     </nav>
     <div id="userbox" class="userbox" hidden>
       <span id="user-name"></span>
@@ -83,6 +84,31 @@
       <h2>Membros</h2>
       <ul id="member-list" class="members"></ul>
       <div id="member-detail"></div>
+    </section>
+    <!-- Stremio -->
+    <section id="view-stremio" hidden>
+      <h2>Clube do Filme no Stremio</h2>
+      <p class="muted">Instale o addon do clube e as listas aparecem dentro do Stremio, na aba Descobrir e na tela inicial:</p>
+      <ul class="catalogs">
+        <li><strong>Top 250</strong>: a lista completa do IMDb, com busca.</li>
+        <li><strong>Ranking do clube</strong>: os filmes ordenados pela média das notas dos membros.</li>
+        <li><strong>Ainda não vi</strong>: o que falta você assistir.</li>
+        <li><strong>Minhas notas</strong>: o que você já avaliou, da maior para a menor nota.</li>
+      </ul>
+      <div class="card stremio-card">
+        <div class="watch">
+          <a id="stremio-app" class="btn-stremio" href="#">▶ Instalar no app Stremio</a>
+          <a id="stremio-web" class="btn-stremio outline" href="#" target="_blank" rel="noopener">Instalar no Stremio Web ↗</a>
+        </div>
+        <label class="muted">Ou cole este link em <em>Addons → buscar addon</em> no Stremio:
+          <input id="stremio-url" readonly>
+        </label>
+        <div class="stremio-actions">
+          <button id="stremio-copy" class="link">Copiar link</button>
+          <button id="stremio-reset" class="link small">Gerar link novo (o antigo para de funcionar)</button>
+        </div>
+        <p class="muted small">Este link é pessoal: ele mostra as suas notas. Não compartilhe. O addon só mostra as listas; o que aparece para assistir depende dos outros addons que você tem no Stremio.</p>
+      </div>
     </section>
   </main>
 

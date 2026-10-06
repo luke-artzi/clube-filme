@@ -1,0 +1,53 @@
+name: Atualizar lista do IMDb
+
+on:
+  # Execução única agendada: 07/10/2026 às 12h (Brasília) = 15h UTC.
+  # O cron do GitHub não tem ano, então o passo "Conferir data" impede que rode de novo em 2027.
+  schedule:
+    - cron: '0 15 7 10 *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Conferir data
+        id: guard
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "$(date -u +%Y)" != "2026" ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.guard.outputs.run == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.guard.outputs.run == 'true'
+        with:
+          node-version: 22
+
+      - name: Baixar Top 250 do IMDb
+        if: steps.guard.outputs.run == 'true'
+        run: node scripts/update-movies.js
+
+      - name: Conferir que o site continua funcionando
+        if: steps.guard.outputs.run == 'true'
+        run: npm ci && npm test
+
+      - name: Salvar no repositório
+        if: steps.guard.outputs.run == 'true'
+        run: |
+          if git diff --quiet data/movies.json; then
+            echo "A lista do IMDb não mudou."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898099+github-actions[bot]@users.noreply.github.com"
+          git add data/movies.json
+          git commit -m "Atualiza a lista Top 250 do IMDb"
+          git push

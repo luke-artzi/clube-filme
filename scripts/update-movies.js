@@ -35,6 +35,12 @@ async function main() {
     };
   });
 
+  // Não salva uma lista quebrada (página bloqueada, formato novo etc.).
+  const invalid = movies.filter((m) => !/^tt\d+$/.test(m.id || '') || !m.title || !Number.isInteger(m.year));
+  if (movies.length < 240 || invalid.length) {
+    throw new Error(`Lista suspeita: ${movies.length} filmes, ${invalid.length} inválidos. Nada foi salvo.`);
+  }
+
   fs.writeFileSync(OUT, JSON.stringify({ source: URL, updatedAt: new Date().toISOString().slice(0, 10), movies }, null, 1) + '\n');
   console.log(`Salvo ${movies.length} filmes em ${path.relative(process.cwd(), OUT)}. Reinicie o servidor para aplicar.`);
 }

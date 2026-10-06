@@ -44,6 +44,10 @@ A lista fica em `data/movies.json`. Para baixar o Top 250 atual direto do IMDb:
 npm run update-movies
 ```
 
+Se a lista baixada parecer quebrada (menos de 240 filmes ou dados faltando), o script não salva nada.
+
+A atualização também pode rodar pelo GitHub Actions: abra **Actions → Atualizar lista do IMDb → Run workflow**. Ela baixa a lista, roda os testes e faz o commit do `data/movies.json` se algo mudou. Há uma execução agendada para 07/10/2026 às 12h (Brasília).
+
 Depois reinicie o servidor. Filmes que saíram do Top 250 somem da lista, mas as notas antigas continuam guardadas no banco.
 
 ## Deploy
